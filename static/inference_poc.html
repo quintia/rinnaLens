@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ONNX Inference PoC</title>
+<style>
+  body { font-family: monospace; padding: 2rem; background: #111; color: #eee; max-width: 900px; }
+  h2 { margin-bottom: 0.5rem; }
+  pre { background: #1e1e1e; padding: 1rem; border: 1px solid #444; white-space: pre-wrap; word-break: break-all; }
+  .log-line { margin: 0; }
+  .ok  { color: #6f6; }
+  .err { color: #f66; }
+  .dim { color: #888; }
+  progress { width: 100%; height: 1.2rem; margin: 0.5rem 0; }
+  textarea { width: 100%; height: 60px; background: #222; color: #eee; border: 1px solid #555; padding: 0.5rem; font-size: 1rem; }
+  button { margin-top: 0.5rem; padding: 0.5rem 1.2rem; font-size: 1rem; cursor: pointer; }
+</style>
+</head>
+<body>
+<h2>ONNX Runtime Web — rinna GPT-2 PoC</h2>
+
+<div id="progress-wrap">
+  <div id="progress-label" class="dim">Loading model chunks...</div>
+  <progress id="progress" value="0" max="1"></progress>
+</div>
+
+<textarea id="input" placeholder="日本語テキストを入力...">吾輩は猫である</textarea>
+<br>
+<button id="btn" disabled>Run Inference</button>
+
+<h3>Log</h3>
+<pre id="log"></pre>
+
+<script type="module">
+import * as ort from '/static/vendor/ort/ort.min.mjs';
+import { loadTokenizer } from '/static/js/tokenizer.js';
+import { LogitLensEngine } from '/static/js/logit_lens.js';
+
+// WASM ファイルをローカルから取得
+ort.env.wasm.wasmPaths = '/static/vendor/ort/';
+
+const MODEL_BASE = '/static/model/gpt2';
+const logEl      = document.getElementById('log');
+const progEl     = document.getElementById('progress');
+const progLabel  = document.getElementById('progress-label');
+const btn        = document.getElementById('btn');
+
+let session    = null;
+let tokenizer  = null;
+let lensEngine = null;
+
+function log(msg, cls = '') {
+  const p = document.createElement('p');
+  p.className = 'log-line' + (cls ? ' ' + cls : '');
+  p.textContent = msg;
+  logEl.appendChild(p);
+  logEl.scrollTop = logEl.scrollHeight;
+  console.log(msg);
+}
+
+// ── チャンク fetch & 結合 ───────────────────────────────────────
+async function fetchChunkedModel(meta) {
+  const chunks = meta.onnx_chunks;
+  log(`Fetching ${chunks.length} chunks (total ~${meta.onnx_size_mb} MB)...`);
+
+  const buffers = await Promise.all(
+    chunks.map(async (name, i) => {
+      const res = await fetch(`${MODEL_BASE}/${name}`);
+      if (!res.ok) throw new Error(`Failed: ${name} (${res.status})`);
+      const buf = await res.arrayBuffer();
+      progEl.value = (i + 1) / chunks.length;
+      progLabel.textContent = `Fetched ${i + 1} / ${chunks.length} chunks`;
+      log(`  chunk ${i}: ${(buf.byteLength / 1e6).toFixed(1)} MB`, 'dim');
+      return buf;
+    })
+  );
+
+  // 全チャンクを 1 つの Uint8Array に結合
+  const totalBytes = buffers.reduce((s, b) => s + b.byteLength, 0);
+  const merged = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const buf of buffers) {
+    merged.set(new Uint8Array(buf), offset);
+    offset += buf.byteLength;
+  }
+  log(`Merged: ${(totalBytes / 1e6).toFixed(1)} MB`);
+  return merged;
+}
+
+// ── 初期化 ─────────────────────────────────────────────────────
+async function init() {
+  try {
+    const t0 = performance.now();
+
+    // トークナイザ & メタデータを並行ロード
+    const [meta, tok] = await Promise.all([
+      fetch(`${MODEL_BASE}/metadata.json`).then(r => r.json()),
+      loadTokenizer('/static/model/tokenizer'),
+    ]);
+    tokenizer = tok;
+    log(`✓ Tokenizer loaded (vocab=${tokenizer.vocabSize})`, 'ok');
+    log(`  Model: ${meta.n_layer}L / ${meta.n_head}H / ${meta.n_embd}D`, 'dim');
+
+    // lm_head と モデルを並行ロード
+    lensEngine = new LogitLensEngine(`${MODEL_BASE}/lm_head.npy`, meta);
+    const [modelBytes, lmHeadMs] = await Promise.all([
+      fetchChunkedModel(meta),
+      lensEngine.load(),
+    ]);
+    log(`✓ lm_head loaded (${lmHeadMs}ms)`, 'ok');
+
+    log('Creating InferenceSession...');
+    session = await ort.InferenceSession.create(modelBytes, {
+      executionProviders: ['wasm'],
+    });
+
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+    log(`✓ Session ready in ${elapsed}s`, 'ok');
+    log(`  Inputs : ${session.inputNames.join(', ')}`, 'dim');
+    log(`  Outputs: ${session.outputNames.join(', ')}`, 'dim');
+
+    progLabel.textContent = '✓ Model loaded';
+    btn.disabled = false;
+
+  } catch (e) {
+    log(`✗ ${e.message}`, 'err');
+    console.error(e);
+  }
+}
+
+// ── 推論 ────────────────────────────────────────────────────────
+async function runInference() {
+  const text = document.getElementById('input').value.trim();
+  if (!session || !tokenizer || !text) return;
+  btn.disabled = true;
+
+  try {
+    const encoded = tokenizer.encode(text);
+    const ids = encoded.input_ids;
+    log(`\nInput: ${JSON.stringify(text)}`);
+    log(`Tokens: ${JSON.stringify(encoded.tokens)}`);
+    log(`IDs: [${ids.join(', ')}]  (len=${ids.length})`);
+
+    // int64 テンソルを作成 [1, seq_len]
+    const inputTensor = new ort.Tensor(
+      'int64',
+      BigInt64Array.from(ids.map(BigInt)),
+      [1, ids.length],
+    );
+
+    log('Running inference...');
+    const t0 = performance.now();
+    const output = await session.run({ input_ids: inputTensor });
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+    log(`✓ Inference done in ${elapsed}s`, 'ok');
+
+    // 出力確認
+    const logits  = output['logits'];
+    const hidden  = output['hidden_states'];
+    const attn    = output['attentions'];
+
+    log(`  logits        : [${logits.dims.join(', ')}]`);
+    log(`  hidden_states : [${hidden.dims.join(', ')}]`);
+    log(`  attentions    : [${attn.dims.join(', ')}]`);
+
+    // Logit Lens: 各層の最終トークン位置での top-5 予測
+    const seqLen = logits.dims[1];
+    log('\nComputing logit lens (last token, all layers)...');
+    const t1 = performance.now();
+    const lensResults = lensEngine.computePosition(hidden.data, seqLen, -1, 5);
+    log(`✓ Logit lens done in ${((performance.now()-t1)/1000).toFixed(3)}s`, 'ok');
+
+    log('\nLogit Lens — top-5 per layer (last token):');
+    for (const { layer, topTokens } of lensResults) {
+      const label = layer === 0 ? 'embed' : `L${layer - 1}  `;
+      const tops = topTokens.map(({ id, prob }) =>
+        `${JSON.stringify(tokenizer.vocab[id]?.[0] ?? '?')}(${(prob*100).toFixed(1)}%)`
+      ).join('  ');
+      log(`  [${label}]  ${tops}`);
+    }
+
+  } catch (e) {
+    log(`✗ ${e.message}`, 'err');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+btn.addEventListener('click', runInference);
+document.getElementById('input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.ctrlKey) runInference();
+});
+
+init();
+</script>
+</body>
+</html>

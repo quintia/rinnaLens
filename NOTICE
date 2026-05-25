@@ -1,0 +1,42 @@
+rinnaLens
+Copyright (c) 2026 K. Yamaguchi (@quintia)
+
+This product includes third-party software with the following licenses.
+
+-------------------------------------------------------------------------------
+
+ONNX Runtime Web v1.20.1
+https://github.com/microsoft/onnxruntime
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License:
+  https://github.com/microsoft/onnxruntime/blob/main/LICENSE
+
+Files: static/vendor/ort/
+
+-------------------------------------------------------------------------------
+
+React v18
+https://github.com/facebook/react
+
+Copyright (c) Meta Platforms, Inc. and affiliates.
+
+Licensed under the MIT License:
+  https://github.com/facebook/react/blob/main/LICENSE
+
+Loaded at runtime via esm.sh CDN.
+
+-------------------------------------------------------------------------------
+
+@xyflow/react v12 (React Flow)
+https://github.com/xyflow/xyflow
+
+Copyright (c) 2023 webkid GmbH
+
+Licensed under the MIT License:
+  https://github.com/xyflow/xyflow/blob/main/LICENSE
+
+Loaded at runtime via esm.sh / jsDelivr CDN.
+
+-------------------------------------------------------------------------------

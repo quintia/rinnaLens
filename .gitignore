@@ -1,0 +1,105 @@
+# Editor backups/temporary files
+*~
+*.swp
+
+# OS files
+## Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+## macOS
+._*
+.DS_Store
+Icon?
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.Spotlight-V100
+
+# IDE file, build files
+*.ipr
+*.iws
+*.iml
+.idea
+*.sublime-project
+*.sublime-workspace
+.gradle/
+.ipynb_checkpoints/
+.vscode/
+*.code-workspace
+.claude/
+
+# log
+log
+*.log*
+log_*
+log*/
+*log/
+
+# program binary files
+build/
+target/
+class/
+out/
+dist/
+## Python
+*.pyc
+*.pyd
+__pycache__/
+.pytest_cache/
+.coverage
+.mypy_cache/
+## JavaScript/Node.js
+node_modules/
+package-lock.json
+.yarn/cache/
+.yarn/install-state.gz
+yarn.lock
+.pnp
+.pnp.js
+## TypeScript
+*.tsbuildinfo
+.tscache/
+## Rust
+Cargo.lock
+## Go
+./vendor/
+
+# virtual environment
+./venv/
+./.venv/
+
+# envrionment variable
+.env*
+
+
+# other data
+*.db
+*.sqlite
+*.sqlite3
+
+# other
+data/
+figures/
+
+# Machine Learning / Training artifacts
+wandb/
+runs/
+mlruns/
+outputs/
+checkpoints/
+lightning_logs/
+
+# Model files (if not in above directories)
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.h5
+*.pkl
+*.pickle
+
+# Application cache
+.cache/
+static/model/
