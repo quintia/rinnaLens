@@ -3,6 +3,8 @@
 `rinna/japanese-gpt2-small` 向けのブラウザ完結型 LogitLens 可視化ツールです。  
 ONNX Runtime Web を使いブラウザ内で推論を行うため、起動後のバックエンドサーバは不要です。
 
+![スクリーンショット](./ScreenShot.png)
+
 **できること**
 
 - 各 Transformer 層の logit lens（語彙射影）
