@@ -13,6 +13,19 @@ import { buildGraphData }   from './graph_builder.js';
 
 const MODEL_BASE     = new URL('../model/gpt2',      import.meta.url).href;
 const TOKENIZER_BASE = new URL('../model/tokenizer', import.meta.url).href;
+const SENTENCEPIECE_BOUNDARY = '▁';
+
+function formatInputToken(token, index) {
+  if (token == null) return '?';
+  if (index === 0 && token === SENTENCEPIECE_BOUNDARY) return '<文頭>';
+  return token.replace(/▁/g, ' ');
+}
+
+function formatAttentionToken(token, index) {
+  if (token == null) return '?';
+  if (index === 0 && token === SENTENCEPIECE_BOUNDARY) return '<文頭>';
+  return token;
+}
 
 export class InferenceEngine {
   constructor() {
@@ -157,9 +170,12 @@ export class InferenceEngine {
     const { tokens, inputIds, attn, lensResults, seqLen } = this._cache;
     const { n_head, n_embd } = this.meta;
 
-    // SentencePiece standalone word-boundary marker — Python では非表示にする
+    // SentencePiece standalone word-boundary marker. 入力トークン列では
+    // 文頭以外の単独マーカーだけ非表示にする。
     const blankIdx = new Set(
-      tokens.map((t, i) => t === '▁' ? i : -1).filter(i => i >= 0)
+      tokens
+        .map((t, i) => t === SENTENCEPIECE_BOUNDARY && i !== 0 ? i : -1)
+        .filter(i => i >= 0)
     );
 
     if (nodeId === 'Input') {
@@ -169,7 +185,7 @@ export class InferenceEngine {
           .map((id, i) => ({
             index:    i,
             token_id: id,
-            token:    tokens[i]?.replace(/▁/g, ' ') ?? '?',
+            token:    formatInputToken(tokens[i], i),
           }))
           .filter((_, i) => !blankIdx.has(i)),
       }];
@@ -184,17 +200,14 @@ export class InferenceEngine {
       // attn.data: flat [n_layer, 1, n_head, seq, seq]
       const stride = n_head * seqLen * seqLen;
 
-      // ▁ トークンの行/列を除外し、残りの行を正規化
-      const visibleIdx = [...Array(seqLen).keys()].filter(i => !blankIdx.has(i));
+      // Attention は全 key 方向ですでに正規化済み。SentencePiece の ▁ も
+      // 実際のトークンなので、除外後に再正規化すると重みが別物になる。
+      const visibleIdx = [...Array(seqLen).keys()];
       const matrix = visibleIdx.map(row => {
-        const rowData = visibleIdx.map(col => {
+        return visibleIdx.map(col => {
           const idx = layer * stride + head * seqLen * seqLen + row * seqLen + col;
-          return attn.data[idx];
+          return parseFloat(attn.data[idx].toFixed(6));
         });
-        const sum = rowData.reduce((s, v) => s + v, 0);
-        return sum > 0
-          ? rowData.map(v => parseFloat((v / sum).toFixed(6)))
-          : rowData.map(v => parseFloat(v.toFixed(6)));
       });
 
       return [{
@@ -202,7 +215,7 @@ export class InferenceEngine {
         title:  `${nodeId} — Attention Pattern`,
         layer,
         head,
-        tokens: visibleIdx.map(i => tokens[i]?.replace(/▁/g, ' ') ?? '?'),
+        tokens: visibleIdx.map(i => formatAttentionToken(tokens[i], i)),
         matrix,
       }];
     }
