@@ -25,8 +25,8 @@ uv sync
 
 ```bash
 uv run python scripts/export_tokenizer.py
-# → static/model/tokenizer/ に出力
 ```
+→ static/model/tokenizer/ に出力
 
 ### 2. モデルの変換
 
@@ -35,8 +35,8 @@ HuggingFace から `rinna/japanese-gpt2-small` をダウンロードし ONNX 形
 
 ```bash
 uv run python scripts/export_onnx.py
-# → static/model/gpt2/ に出力（ONNX チャンク + lm_head.npy + metadata.json）
 ```
+→ static/model/gpt2/ に出力（ONNX チャンク + lm_head.npy + metadata.json）
 
 ---
 
