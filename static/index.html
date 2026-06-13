@@ -155,6 +155,7 @@
         padding: 10px 18px;
         font-size: 0.95rem;
         font-weight: 700;
+        border-radius: 999px;
       }
       input {
         padding: 11px 13px;
@@ -265,23 +266,55 @@
         flex-shrink: 0;
         margin-bottom: 12px;
       }
+      .tag-group {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .tag-label {
+        font-size: 0.72rem;
+        padding: 2px 14px 6px;
+        margin-left: 0;
+        margin-bottom: -4px;
+        border-radius: 12px 12px 0 0;
+        letter-spacing: 0.04em;
+        background: rgba(244, 248, 252, 0.96);
+        border: 1px solid var(--line);
+        border-bottom: none;
+        color: var(--muted);
+        position: relative;
+        z-index: 1;
+      }
+      #predict-label,
+      #predict-tag {
+        background: #6b7280;
+        border-color: #6b7280;
+        color: #ffffff;
+      }
       .tag {
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        padding: 8px 12px;
+        padding: 8px 16px;
         min-height: 38px;
-        border-radius: 999px;
+        min-width: 96px;
+        border-radius: 0 12px 12px 12px;
         background: rgba(244, 248, 252, 0.96);
         border: 1px solid var(--line);
         color: var(--text);
         font-size: 0.85rem;
       }
       #next-predict-btn {
-        font-size: 0.85rem;
-        padding: 8px 14px;
+        font-size: 0.9rem;
+        padding: 10px 20px;
+        min-height: 42px;
+        border-radius: 999px;
         background: linear-gradient(135deg, #4caf87 0%, #2e8b6e 100%);
-        box-shadow: 0 6px 14px rgba(46, 139, 110, 0.18);
+        box-shadow:
+          0 10px 20px rgba(46, 139, 110, 0.32),
+          inset 0 1px 0 rgba(255, 255, 255, 0.28),
+          inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+        letter-spacing: 0.04em;
       }
       .modal {
         display: none;
@@ -527,8 +560,14 @@
 
       <section id="result" hidden>
         <div id="result-meta">
-          <span class="tag" id="prompt-tag">入力:&nbsp;</span>
-          <span class="tag" id="predict-tag">予測:&nbsp;</span>
+          <div class="tag-group">
+            <span class="tag-label" id="prompt-label">入力</span>
+            <span class="tag" id="prompt-tag">&nbsp;</span>
+          </div>
+          <div class="tag-group">
+            <span class="tag-label" id="predict-label">予測</span>
+            <span class="tag" id="predict-tag">&nbsp;</span>
+          </div>
           <button id="next-predict-btn" type="button" hidden>続きを予測</button>
         </div>
         <div id="graph"></div>

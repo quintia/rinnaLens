@@ -271,7 +271,7 @@ const setRunning = (running) => {
 };
 
 const setInputTag = (prompt) => {
-  promptTag.textContent = prompt ? `入力: ${prompt}` : `入力:${EMPTY_TAG_SUFFIX}`;
+  promptTag.textContent = prompt ? prompt : EMPTY_TAG_SUFFIX;
 };
 
 const closeModal = () => {
@@ -522,7 +522,7 @@ const renderResult = (data) => {
   const rawOutput = data.output ?? "";
   const outputIsBlank = rawOutput.trim() === "";
   const displayOutput = outputIsBlank ? "<空白>" : rawOutput;
-  predictTag.textContent = (data.output != null) ? `予測: ${displayOutput}` : "";
+  predictTag.textContent = (data.output != null) ? displayOutput : EMPTY_TAG_SUFFIX;
   predictTag.style.background = "#6b7280";
   predictTag.style.color = "#ffffff";
 
@@ -543,7 +543,7 @@ const clearResult = ({ keepPrompt = null } = {}) => {
   if (!currentGraphData) {
     resultSection.hidden = true;
   }
-  predictTag.textContent = `予測:${EMPTY_TAG_SUFFIX}`;
+  predictTag.textContent = EMPTY_TAG_SUFFIX;
   predictTag.style.background = "#6b7280";
   predictTag.style.color = "#ffffff";
   setInputTag(keepPrompt);
