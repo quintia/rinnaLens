@@ -16,29 +16,64 @@ const e = React.createElement;
 
 const promptField = document.getElementById("prompt");
 const submitBtn = document.getElementById("submit");
-const exampleLink = document.getElementById("example-link");
-const exampleRandomBtn = document.getElementById("example-random-btn");
+const exampleDropdown = document.getElementById("example-dropdown");
+const exampleDropdownToggle = document.getElementById("example-dropdown-toggle");
+const exampleDropdownMenu = document.getElementById("example-dropdown-menu");
 const clearLink = document.getElementById("clear-link");
 const statusEl = document.getElementById("status");
 const resultSection = document.getElementById("result");
 const graphEl = document.getElementById("graph");
-const predictTag = document.getElementById("predict-tag");
-const promptTag = document.getElementById("prompt-tag");
-const nextPredictBtn = document.getElementById("next-predict-btn");
 const modal = document.getElementById("imageModal");
 const modalBody = document.getElementById("modalBody");
 const modalCloseBtn = document.getElementById("modal-close-btn");
-const exampleModal = document.getElementById("exampleModal");
-const exampleList = document.getElementById("exampleList");
-const exampleModalCloseBtn = document.getElementById("example-modal-close-btn");
 
 const graphRoot = createRoot(graphEl);
-const EMPTY_TAG_SUFFIX = "\u00A0";
 
 let currentSource = null;
 let currentGraphData = null;
-let nextPredictData = null;
 let examplePrompts = [];
+
+const getPromptValue = () => (promptField.innerText ?? "").replace(/\u00A0/g, " ");
+
+const setPromptText = (text) => {
+  promptField.textContent = text ?? "";
+};
+
+const enterEditMode = ({ focus = false, caretToEnd = false } = {}) => {
+  if (promptField.dataset.mode === "edit") {
+    if (focus) promptField.focus();
+    return;
+  }
+  const text = getPromptValue();
+  promptField.dataset.mode = "edit";
+  promptField.setAttribute("contenteditable", "true");
+  setPromptText(text);
+  if (focus) {
+    promptField.focus();
+    if (caretToEnd) {
+      const range = document.createRange();
+      range.selectNodeContents(promptField);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
+};
+
+const enterDisplayMode = (prompt, output) => {
+  promptField.dataset.mode = "display";
+  promptField.setAttribute("contenteditable", "false");
+  promptField.innerHTML = "";
+  const promptSpan = document.createElement("span");
+  promptSpan.className = "prompt-text";
+  promptSpan.textContent = prompt ?? "";
+  const predictSpan = document.createElement("span");
+  predictSpan.className = "predict-text";
+  predictSpan.textContent = output ?? "";
+  promptField.appendChild(promptSpan);
+  promptField.appendChild(predictSpan);
+};
 
 const engine = new InferenceEngine();
 
@@ -220,22 +255,51 @@ const setStatus = (text) => {
   statusEl.textContent = text || "";
 };
 
-const chooseRandomExample = () => {
-  if (!examplePrompts.length) {
-    return null;
+const setExampleDropdownVisible = (visible) => {
+  if (exampleDropdown) {
+    exampleDropdown.hidden = !visible;
   }
-  const candidates = examplePrompts.filter((example) => example !== promptField.value);
-  const pool = candidates.length > 0 ? candidates : examplePrompts;
-  const index = Math.floor(Math.random() * pool.length);
-  return pool[index];
 };
 
-const setExampleLinkVisible = (visible) => {
-  if (exampleLink) {
-    exampleLink.hidden = !visible;
-  }
-  if (exampleRandomBtn) {
-    exampleRandomBtn.hidden = !visible;
+const populateExampleDropdown = () => {
+  if (!exampleDropdownMenu) return;
+  exampleDropdownMenu.innerHTML = "";
+  examplePrompts.forEach((text) => {
+    const item = document.createElement("li");
+    item.setAttribute("role", "option");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = text;
+    btn.addEventListener("click", () => {
+      closeExampleDropdown();
+      resetPredictionState();
+      setPromptText(text);
+      enterEditMode({ focus: true, caretToEnd: true });
+    });
+    item.appendChild(btn);
+    exampleDropdownMenu.appendChild(item);
+  });
+};
+
+const openExampleDropdown = () => {
+  if (!exampleDropdown || !exampleDropdownMenu) return;
+  exampleDropdown.dataset.open = "true";
+  exampleDropdownMenu.hidden = false;
+  exampleDropdownToggle?.setAttribute("aria-expanded", "true");
+};
+
+const closeExampleDropdown = () => {
+  if (!exampleDropdown || !exampleDropdownMenu) return;
+  exampleDropdown.dataset.open = "false";
+  exampleDropdownMenu.hidden = true;
+  exampleDropdownToggle?.setAttribute("aria-expanded", "false");
+};
+
+const toggleExampleDropdown = () => {
+  if (exampleDropdown?.dataset.open === "true") {
+    closeExampleDropdown();
+  } else {
+    openExampleDropdown();
   }
 };
 
@@ -257,53 +321,28 @@ const parseExamplePrompts = (text) => {
 
 const setRunning = (running) => {
   submitBtn.disabled = running;
-  promptField.disabled = running;
-  nextPredictBtn.disabled = running;
-  if (exampleLink) {
-    exampleLink.disabled = running;
+  if (running) {
+    promptField.setAttribute("contenteditable", "false");
+    promptField.setAttribute("aria-disabled", "true");
+  } else {
+    promptField.removeAttribute("aria-disabled");
+    if (promptField.dataset.mode === "edit") {
+      promptField.setAttribute("contenteditable", "true");
+    }
   }
-  if (exampleRandomBtn) {
-    exampleRandomBtn.disabled = running;
+  if (exampleDropdownToggle) {
+    exampleDropdownToggle.disabled = running;
+  }
+  if (running) {
+    closeExampleDropdown();
   }
   if (clearLink) {
     clearLink.disabled = running;
   }
 };
 
-const setInputTag = (prompt) => {
-  promptTag.textContent = prompt ? prompt : EMPTY_TAG_SUFFIX;
-};
-
 const closeModal = () => {
   modal.classList.remove("modal-active");
-};
-
-const closeExampleModal = () => {
-  if (exampleModal) {
-    exampleModal.classList.remove("modal-active");
-  }
-};
-
-const openExampleModal = () => {
-  if (!exampleModal || !exampleList) {
-    return;
-  }
-  exampleList.innerHTML = "";
-  examplePrompts.forEach((text) => {
-    const item = document.createElement("li");
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "example-list-item";
-    btn.textContent = text;
-    btn.addEventListener("click", () => {
-      closeExampleModal();
-      resetPredictionState();
-      promptField.value = text;
-    });
-    item.appendChild(btn);
-    exampleList.appendChild(item);
-  });
-  exampleModal.classList.add("modal-active");
 };
 
 const createModalSection = (title) => {
@@ -490,22 +529,16 @@ if (modalCloseBtn) {
   modalCloseBtn.addEventListener("click", closeModal);
 }
 
-if (exampleModal) {
-  exampleModal.addEventListener("click", (event) => {
-    if (event.target === exampleModal) {
-      closeExampleModal();
-    }
-  });
-}
-
-if (exampleModalCloseBtn) {
-  exampleModalCloseBtn.addEventListener("click", closeExampleModal);
-}
-
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeModal();
-    closeExampleModal();
+    closeExampleDropdown();
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (exampleDropdown?.dataset.open === "true" && !exampleDropdown.contains(event.target)) {
+    closeExampleDropdown();
   }
 });
 
@@ -519,44 +552,26 @@ const renderResult = (data) => {
     renderGraph(data.graph_data);
   }
 
-  const rawOutput = data.output ?? "";
-  const outputIsBlank = rawOutput.trim() === "";
-  const displayOutput = outputIsBlank ? "<空白>" : rawOutput;
-  predictTag.textContent = (data.output != null) ? displayOutput : EMPTY_TAG_SUFFIX;
-  predictTag.style.background = "#6b7280";
-  predictTag.style.color = "#ffffff";
-
-  setInputTag(data.prompt);
-
   if (data.output != null && data.prompt !== undefined) {
-    nextPredictData = { prompt: data.prompt, output: rawOutput };
-    nextPredictBtn.hidden = false;
-    nextPredictBtn.disabled = false;
+    enterDisplayMode(data.prompt, data.output);
   }
 
   resultSection.hidden = false;
 };
 
-const clearResult = ({ keepPrompt = null } = {}) => {
-  // グラフが未表示のときだけ result セクションを隠す。
-  // すでにグラフがある場合は FlowCanvas をアンマウントせず、viewport を保持する。
+const clearResult = () => {
   if (!currentGraphData) {
     resultSection.hidden = true;
   }
-  predictTag.textContent = EMPTY_TAG_SUFFIX;
-  predictTag.style.background = "#6b7280";
-  predictTag.style.color = "#ffffff";
-  setInputTag(keepPrompt);
-  nextPredictBtn.hidden = true;
-  nextPredictData = null;
 };
 
-const resetPredictionState = ({ prompt = null, clearInput = false } = {}) => {
+const resetPredictionState = ({ clearInput = false } = {}) => {
   resetPreviousJob();
   if (clearInput) {
-    promptField.value = "";
+    setPromptText("");
   }
-  clearResult({ keepPrompt: prompt });
+  enterEditMode();
+  clearResult();
   setStatus("");
 };
 
@@ -598,7 +613,7 @@ const startJob = (jobId) => {
 };
 
 const runAnalysis = async () => {
-  const prompt = promptField.value;
+  const prompt = getPromptValue();
   if (prompt === "") {
     setStatus("プロンプトを入力してください");
     return;
@@ -606,8 +621,7 @@ const runAnalysis = async () => {
 
   setStatus("解析を開始しています…");
   setRunning(true);
-  clearResult({ keepPrompt: prompt });
-  setInputTag(prompt);
+  clearResult();
 
   try {
     const data = await engine.run(prompt);
@@ -621,7 +635,7 @@ const runAnalysis = async () => {
 };
 
 const initializeExamples = async () => {
-  if (!exampleLink) return;
+  if (!exampleDropdown) return;
 
   try {
     const res = await fetch("./examples");
@@ -630,7 +644,8 @@ const initializeExamples = async () => {
   } catch (_) {
     examplePrompts = [];
   }
-  setExampleLinkVisible(examplePrompts.length > 0);
+  populateExampleDropdown();
+  setExampleDropdownVisible(examplePrompts.length > 0);
 };
 
 const initializeEngine = async () => {
@@ -658,42 +673,38 @@ const initializeEngine = async () => {
 submitBtn.addEventListener("click", runAnalysis);
 promptField.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
+    event.preventDefault();
     runAnalysis();
   }
 });
-if (exampleLink) {
-  exampleLink.addEventListener("click", () => {
-    openExampleModal();
-  });
-}
-if (exampleRandomBtn) {
-  exampleRandomBtn.addEventListener("click", () => {
-    const example = chooseRandomExample();
-    if (!example) {
-      return;
-    }
-    resetPredictionState();
-    promptField.value = example;
+promptField.addEventListener("mousedown", (event) => {
+  if (promptField.dataset.mode === "display" && submitBtn.disabled !== true) {
+    event.preventDefault();
+    enterEditMode({ focus: true, caretToEnd: true });
+  }
+});
+promptField.addEventListener("focus", () => {
+  if (promptField.dataset.mode === "display") {
+    enterEditMode({ focus: true, caretToEnd: true });
+  }
+});
+promptField.addEventListener("paste", (event) => {
+  event.preventDefault();
+  const text = (event.clipboardData || window.clipboardData).getData("text");
+  document.execCommand("insertText", false, text);
+});
+if (exampleDropdownToggle) {
+  exampleDropdownToggle.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleExampleDropdown();
   });
 }
 if (clearLink) {
   clearLink.addEventListener("click", () => {
     resetPredictionState({ clearInput: true });
+    promptField.focus();
   });
 }
-nextPredictBtn.addEventListener("click", () => {
-  if (!nextPredictData) return;
-  const append = nextPredictData.output.trim() === "" ? " " : nextPredictData.output;
-  promptField.value = nextPredictData.prompt + append;
-  runAnalysis();
-});
-
-promptField.addEventListener("input", () => {
-  if (!nextPredictData || nextPredictBtn.hidden) return;
-  const append = nextPredictData.output.trim() === "" ? " " : nextPredictData.output;
-  const predictedValue = nextPredictData.prompt + append;
-  nextPredictBtn.disabled = promptField.value !== predictedValue;
-});
 
 initializeExamples();
 initializeEngine();

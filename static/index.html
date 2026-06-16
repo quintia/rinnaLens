@@ -104,43 +104,106 @@
         transform: none;
         color: #1558be;
       }
-      .example-modal-content {
-        width: min(90vw, 480px);
-      }
-      .example-modal-title {
-        margin: 0 0 14px;
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--text);
-        padding-right: 32px;
-      }
-      .example-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
+      .prompt-input-row {
         display: flex;
-        flex-direction: column;
-        gap: 6px;
+        gap: 8px;
+        align-items: stretch;
       }
-      .example-list-item {
-        padding: 10px 14px;
+      .prompt-input-row .prompt-area {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .dropdown {
+        position: relative;
+        display: inline-flex;
+      }
+      .prompt-input-row .dropdown {
+        align-self: stretch;
+        flex: 0 0 auto;
+      }
+      .prompt-input-row .dropdown-toggle {
+        height: 100%;
+        padding: 0 10px 0 14px;
+        border-radius: 10px;
+      }
+      .dropdown-toggle {
+        appearance: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 8px 6px 12px;
         border-radius: 8px;
         border: 1px solid var(--line);
-        background: rgba(248, 251, 255, 0.96);
-        cursor: pointer;
-        font-size: 0.95rem;
+        background: rgba(255, 255, 255, 0.96);
         color: var(--text);
-        text-align: left;
-        width: 100%;
+        font-family: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
         box-shadow: none;
         transform: none;
-        font-family: inherit;
-        font-weight: 400;
         transition: background 0.14s, border-color 0.14s, color 0.14s;
       }
-      .example-list-item:hover {
+      .dropdown-toggle:hover {
         background: rgba(63, 140, 255, 0.06);
         border-color: var(--accent);
+        color: var(--accent-strong);
+        filter: none;
+        transform: none;
+      }
+      .dropdown-toggle svg {
+        transition: transform 0.18s ease;
+      }
+      .dropdown[data-open="true"] .dropdown-toggle svg {
+        transform: rotate(180deg);
+      }
+      .dropdown[data-open="true"] .dropdown-toggle {
+        background: rgba(63, 140, 255, 0.08);
+        border-color: var(--accent);
+        color: var(--accent-strong);
+      }
+      .dropdown-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        min-width: max(220px, 100%);
+        max-height: 464px;
+        overflow-y: auto;
+        background: #ffffff;
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        box-shadow: 0 14px 32px rgba(66, 94, 130, 0.16);
+        list-style: none;
+        margin: 0;
+        padding: 6px;
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .dropdown-menu[hidden] {
+        display: none;
+      }
+      .dropdown-menu button {
+        appearance: none;
+        width: 100%;
+        text-align: left;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.92rem;
+        font-weight: 400;
+        cursor: pointer;
+        box-shadow: none;
+        transform: none;
+        transition: background 0.12s, color 0.12s;
+        white-space: nowrap;
+      }
+      .dropdown-menu button:hover {
+        background: rgba(63, 140, 255, 0.08);
         color: var(--accent-strong);
         filter: none;
         transform: none;
@@ -167,6 +230,68 @@
         box-sizing: border-box;
         font-family: inherit;
         font-size: 0.98rem;
+      }
+      .prompt-area {
+        padding: 11px 13px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: rgba(248, 251, 255, 0.96);
+        color: var(--text);
+        width: 100%;
+        min-height: 22px;
+        box-sizing: border-box;
+        font-family: inherit;
+        font-size: 0.98rem;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-break: break-word;
+        cursor: text;
+        transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+      }
+      .prompt-area:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(118, 186, 255, 0.14);
+      }
+      .prompt-area[data-mode="display"] {
+        cursor: pointer;
+        background: rgba(244, 248, 252, 0.96);
+      }
+      .prompt-area[data-mode="display"]:hover {
+        border-color: var(--accent);
+      }
+      .prompt-area[aria-disabled="true"] {
+        opacity: 0.7;
+        cursor: wait;
+      }
+      .prompt-area .prompt-text {
+        color: var(--text);
+      }
+      .prompt-area .predict-text {
+        position: relative;
+        color: var(--accent-strong);
+        font-weight: 700;
+        background-image: linear-gradient(120deg, #76baff 0%, #1d6feb 45%, #76baff 100%);
+        background-size: 220% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: predict-shimmer 2.8s ease-in-out infinite,
+          predict-glow 1.8s ease-in-out infinite alternate;
+        text-shadow: 0 0 8px rgba(63, 140, 255, 0.28);
+      }
+      @keyframes predict-shimmer {
+        0% { background-position: 220% 0; }
+        100% { background-position: -120% 0; }
+      }
+      @keyframes predict-glow {
+        from { text-shadow: 0 0 4px rgba(63, 140, 255, 0.18); }
+        to { text-shadow: 0 0 12px rgba(63, 140, 255, 0.5); }
+      }
+      .prompt-area:empty::before {
+        content: attr(data-placeholder);
+        color: var(--muted);
+        pointer-events: none;
       }
       button {
         padding: 10px 16px;
@@ -256,64 +381,6 @@
         place-items: center;
         color: var(--muted);
         font-size: 0.95rem;
-        letter-spacing: 0.04em;
-      }
-      #result-meta {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        flex-wrap: wrap;
-        flex-shrink: 0;
-        margin-bottom: 12px;
-      }
-      .tag-group {
-        display: inline-flex;
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .tag-label {
-        font-size: 0.72rem;
-        padding: 2px 14px 6px;
-        margin-left: 0;
-        margin-bottom: -4px;
-        border-radius: 12px 12px 0 0;
-        letter-spacing: 0.04em;
-        background: rgba(244, 248, 252, 0.96);
-        border: 1px solid var(--line);
-        border-bottom: none;
-        color: var(--muted);
-        position: relative;
-        z-index: 1;
-      }
-      #predict-label,
-      #predict-tag {
-        background: #6b7280;
-        border-color: #6b7280;
-        color: #ffffff;
-      }
-      .tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 8px 16px;
-        min-height: 38px;
-        min-width: 96px;
-        border-radius: 0 12px 12px 12px;
-        background: rgba(244, 248, 252, 0.96);
-        border: 1px solid var(--line);
-        color: var(--text);
-        font-size: 0.85rem;
-      }
-      #next-predict-btn {
-        font-size: 0.9rem;
-        padding: 10px 20px;
-        min-height: 42px;
-        border-radius: 999px;
-        background: linear-gradient(135deg, #4caf87 0%, #2e8b6e 100%);
-        box-shadow:
-          0 10px 20px rgba(46, 139, 110, 0.32),
-          inset 0 1px 0 rgba(255, 255, 255, 0.28),
-          inset 0 -2px 0 rgba(0, 0, 0, 0.08);
         letter-spacing: 0.04em;
       }
       .modal {
@@ -541,14 +608,20 @@
         <div class="field-row">
           <div class="field">
             <div class="label-row">
-              <label for="prompt">次の単語を予測します</label>
-              <div class="label-actions">
-                <button id="example-link" class="example-link" type="button" hidden>文例を見る</button>
-                <button id="example-random-btn" class="example-link example-random-btn" type="button" hidden>文例からひとつ取り出す</button>
+              <div class="label-actions" style="margin-left: auto">
                 <button id="clear-link" class="example-link" type="button">クリア</button>
               </div>
             </div>
-            <input id="prompt" type="text" required>
+            <div class="prompt-input-row">
+              <div class="dropdown" id="example-dropdown" data-open="false" hidden>
+                <button type="button" class="dropdown-toggle" id="example-dropdown-toggle" aria-haspopup="listbox" aria-expanded="false">
+                  文例
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" color="currentColor" width="16" height="16" role="img" aria-label="chevron down outline" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8 10 4 4 4-4"></path></svg>
+                </button>
+                <ul class="dropdown-menu" id="example-dropdown-menu" role="listbox" hidden></ul>
+              </div>
+              <div id="prompt" class="prompt-area" contenteditable="true" role="textbox" aria-multiline="false" data-mode="edit" data-placeholder="ここに文章を入力してください"></div>
+            </div>
           </div>
           <div class="button-row">
             <button id="submit" type="button">次を予測する</button>
@@ -559,27 +632,9 @@
       <section id="status"></section>
 
       <section id="result" hidden>
-        <div id="result-meta">
-          <div class="tag-group">
-            <span class="tag-label" id="prompt-label">入力</span>
-            <span class="tag" id="prompt-tag">&nbsp;</span>
-          </div>
-          <div class="tag-group">
-            <span class="tag-label" id="predict-label">予測</span>
-            <span class="tag" id="predict-tag">&nbsp;</span>
-          </div>
-          <button id="next-predict-btn" type="button" hidden>続きを予測</button>
-        </div>
         <div id="graph"></div>
       </section>
     </main>
-    <div id="exampleModal" class="modal">
-      <div class="modal-content example-modal-content">
-        <button type="button" class="modal-close" id="example-modal-close-btn">×</button>
-        <h2 class="example-modal-title">クリックで入力されます</h2>
-        <ul id="exampleList" class="example-list"></ul>
-      </div>
-    </div>
     <div id="imageModal" class="modal">
       <div id="modalContent" class="modal-content">
         <button type="button" class="modal-close" id="modal-close-btn">×</button>
