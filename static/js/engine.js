@@ -24,7 +24,15 @@ function formatInputToken(token, index) {
 function formatAttentionToken(token, index) {
   if (token == null) return '?';
   if (index === 0 && token === SENTENCEPIECE_BOUNDARY) return '<文頭>';
+  if (token === SENTENCEPIECE_BOUNDARY) return '<空白>';
   return token;
+}
+
+// 予測ノードの top-k ラベル用。単独の ▁ は <空白>、▁ 混在は空白に展開。
+function formatPredictionLabel(token) {
+  if (token == null) return '?';
+  if (token === SENTENCEPIECE_BOUNDARY) return '<空白>';
+  return token.replace(/▁/g, ' ');
 }
 
 export class InferenceEngine {
@@ -128,15 +136,16 @@ export class InferenceEngine {
     for (let l = 0; l < this.meta.n_layer; l++) {
       const { topTokens } = lensResults[l + 1];
       topPredictions[`MLP${l}`] = topTokens.map(({ id, prob }) => ({
-        token: this.tokenizer.vocab[id]?.[0]?.replace(/▁/g, ' ').trim() || '?',
+        token: formatPredictionLabel(this.tokenizer.vocab[id]?.[0]),
         prob:  parseFloat((prob * 100).toFixed(1)),
       }));
     }
 
-    // 最終出力トークン（最後の層の top-1）
+    // 最終出力トークン（最後の層の top-1）。predict-text に表示するため
+    // ▁ は実スペースに展開して trim しない。
     const lastLayerTop = lensResults[lensResults.length - 1].topTokens[0];
     const outputToken  = this.tokenizer.vocab[lastLayerTop.id]?.[0]
-      ?.replace(/▁/g, ' ').trim() ?? '';
+      ?.replace(/▁/g, ' ') ?? '';
 
     // 推論結果をキャッシュ
     this._cache = {
@@ -234,7 +243,7 @@ export class InferenceEngine {
         title: `${nodeId} — Logit Lens (last token)`,
         items: topTokens.map(({ id, prob, logit }) => ({
           token_id: id,
-          token:    this.tokenizer.vocab[id]?.[0]?.replace(/▁/g, ' ').trim() ?? '?',
+          token:    formatPredictionLabel(this.tokenizer.vocab[id]?.[0]),
           logit:    parseFloat(logit.toFixed(6)),
           prob:     parseFloat(prob.toFixed(6)),
         })),

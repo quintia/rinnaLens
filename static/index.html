@@ -269,6 +269,14 @@
       }
       .prompt-area .predict-text {
         position: relative;
+        display: inline-block;
+        min-width: 0.45em;
+        padding: 0 3px;
+        border-radius: 5px;
+        white-space: pre-wrap;
+        font-size: 1.18em;
+        line-height: 1;
+        vertical-align: baseline;
         color: var(--accent-strong);
         font-weight: 700;
         background-image: linear-gradient(120deg, #76baff 0%, #1d6feb 45%, #76baff 100%);
@@ -277,7 +285,8 @@
         background-clip: text;
         -webkit-text-fill-color: transparent;
         animation: predict-shimmer 2.8s ease-in-out infinite,
-          predict-glow 1.8s ease-in-out infinite alternate;
+          predict-glow 1.8s ease-in-out infinite alternate,
+          predict-pulse 1.8s ease-in-out infinite alternate;
         text-shadow: 0 0 8px rgba(63, 140, 255, 0.28);
       }
       @keyframes predict-shimmer {
@@ -287,6 +296,18 @@
       @keyframes predict-glow {
         from { text-shadow: 0 0 4px rgba(63, 140, 255, 0.18); }
         to { text-shadow: 0 0 12px rgba(63, 140, 255, 0.5); }
+      }
+      @keyframes predict-pulse {
+        from {
+          box-shadow:
+            inset 0 0 0 100vmax rgba(118, 186, 255, 0.10),
+            0 0 6px rgba(63, 140, 255, 0.18);
+        }
+        to {
+          box-shadow:
+            inset 0 0 0 100vmax rgba(118, 186, 255, 0.22),
+            0 0 14px rgba(63, 140, 255, 0.38);
+        }
       }
       .prompt-area:empty::before {
         content: attr(data-placeholder);
